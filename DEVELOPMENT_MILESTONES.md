@@ -106,7 +106,7 @@ Build the foundational platform with essential data governance and PDPA complian
 6. AI API calls do not log raw data
 
 
-###MS1 Test Criteria
+### MS1 Test Criteria
 
 #### T1.1 Unit Tests
 - Thai National ID validator: valid/invalid checksums, edge cases

@@ -2,9 +2,10 @@
 
 ## Document Control
 - **Project Name:** GovData Guard - Open Data Governance Platform
-- **Version:** 1.0.0
+- **Version:** 1.1.0
 - **Last Updated:** 2025-12-30
 - **Status:** Blueprint - Ready for Execution
+- **Deployment Options:** Traditional Cloud (AWS/GCP/Azure) or Firebase
 
 ---
 
@@ -44,11 +45,15 @@ A comprehensive SaaS-based Open Data Governance Platform designed specifically f
 #### Backend Layer (To be implemented)
 ```
 ├── Runtime: Node.js / Python (To be decided)
-├── Framework: [Express/Fastify] or [FastAPI/Flask]
-├── Database: PostgreSQL (for metadata and governance data)
-├── Cache: Redis (for session and temporary data)
-└── File Storage: S3-compatible storage
+├── Framework: [Express/Fastify] or [FastAPI/Flask] or [Firebase Cloud Functions]
+├── Database: PostgreSQL (traditional) or Firestore (Firebase)
+├── Cache: Redis (traditional) or Firebase Realtime Database (Firebase)
+└── File Storage: S3-compatible storage or Firebase Cloud Storage
 ```
+
+**Deployment Options:**
+- **Traditional Cloud:** Express/Fastify with PostgreSQL, Redis, S3
+- **Firebase:** Cloud Functions with Firestore, Firebase Storage
 
 #### AI/ML Layer
 ```
@@ -59,12 +64,16 @@ A comprehensive SaaS-based Open Data Governance Platform designed specifically f
 
 #### Infrastructure
 ```
-├── Hosting: Cloud-native (AWS/GCP/Azure)
-├── Container: Docker
-├── Orchestration: Kubernetes (for scalability)
+├── Hosting: Cloud-native (AWS/GCP/Azure) or Firebase
+├── Container: Docker (for traditional cloud) or Firebase services
+├── Orchestration: Kubernetes (for scalability) or Firebase auto-scaling
 ├── CI/CD: GitHub Actions
-└── Monitoring: [To be determined]
+└── Monitoring: [To be determined - CloudWatch/Stackdriver/Firebase Analytics]
 ```
+
+**Note:** The platform supports two deployment strategies:
+- **Traditional Cloud (AWS/GCP/Azure):** Full containerized deployment with Kubernetes
+- **Firebase:** Serverless deployment using Firebase Hosting, Cloud Functions, Firestore, and Cloud Storage
 
 ### 2.2 System Architecture Diagram
 
@@ -709,6 +718,8 @@ test('DPO can scan and approve a dataset', async ({ page }) => {
 
 ### 8.1 Deployment Architecture
 
+#### Option 1: Traditional Cloud Deployment (AWS/GCP/Azure)
+
 ```
 Production Environment:
 ├── Load Balancer (AWS ALB / GCP Load Balancer)
@@ -719,7 +730,135 @@ Production Environment:
 └── Storage (S3 / GCS)
 ```
 
+**Pros:**
+- Full control over infrastructure
+- Flexible database options (PostgreSQL)
+- Complex query capabilities
+- Existing tooling and expertise
+
+**Cons:**
+- Higher operational complexity
+- Manual scaling configuration
+- Infrastructure management overhead
+
+#### Option 2: Firebase Deployment (Serverless)
+
+```
+Firebase Environment:
+├── Firebase Hosting (Frontend - React SPA)
+├── Cloud Functions for Firebase (Backend API - Node.js)
+├── Cloud Firestore (NoSQL Database)
+├── Firebase Authentication (User Auth with JWT)
+├── Cloud Storage for Firebase (File Storage)
+├── Firebase Realtime Database (Optional - for real-time features)
+└── Firebase Extensions (Optional - for additional features)
+```
+
+**Pros:**
+- Minimal infrastructure management
+- Automatic scaling
+- Built-in security rules
+- Fast deployment and iteration
+- Cost-effective for startups/MVP
+- Integrated authentication
+- Real-time capabilities out of the box
+
+**Cons:**
+- Vendor lock-in to Google Cloud Platform
+- Firestore query limitations vs PostgreSQL
+- Cold start latency for Cloud Functions
+- Less control over infrastructure
+
+#### Firebase-Specific Architecture
+
+```typescript
+// Firebase Project Structure
+firebase-project/
+├── hosting/                  # React Frontend
+│   └── public/
+├── functions/                # Backend API
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── datasets.ts
+│   │   │   ├── scans.ts
+│   │   │   └── users.ts
+│   │   ├── services/
+│   │   │   ├── piiDetection.ts
+│   │   │   ├── geminiAI.ts
+│   │   │   └── compliance.ts
+│   │   └── index.ts
+│   └── package.json
+├── firestore.rules          # Database security rules
+├── storage.rules            # Storage security rules
+└── firebase.json            # Firebase configuration
+```
+
+**Firestore Data Model:**
+```
+firestore/
+├── users/
+│   └── {userId}
+│       ├── email
+│       ├── role
+│       └── orgId
+├── organizations/
+│   └── {orgId}
+│       ├── name
+│       └── settings
+├── datasets/
+│   └── {datasetId}
+│       ├── title
+│       ├── description
+│       ├── metadata
+│       └── pdpaStatus
+├── scans/
+│   └── {scanId}
+│       ├── datasetId
+│       ├── riskScore
+│       ├── findings
+│       └── status
+└── auditLogs/
+    └── {logId}
+        ├── userId
+        ├── action
+        └── timestamp
+```
+
+**Firebase Security Rules Example:**
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Dataset rules
+    match /datasets/{datasetId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasRole('editor') || hasRole('admin');
+      allow delete: if hasRole('admin');
+    }
+    
+    // Scan rules
+    match /scans/{scanId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole('editor') || hasRole('dpo') || hasRole('admin');
+      allow update: if hasRole('dpo') || hasRole('admin');
+    }
+  }
+}
+```
+
 ### 8.2 CI/CD Pipeline
+
+#### Traditional Cloud (Docker/Kubernetes)
 
 ```yaml
 # GitHub Actions Workflow
@@ -751,25 +890,186 @@ jobs:
     - Rollback on failure
 ```
 
+#### Firebase Deployment
+
+```yaml
+# GitHub Actions Workflow for Firebase
+name: Deploy to Firebase
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linters
+        run: npm run lint
+      
+      - name: Run unit tests
+        run: npm run test
+      
+      - name: Run integration tests
+        run: npm run test:integration
+  
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build frontend
+        run: npm run build
+      
+      - name: Build functions
+        run: cd functions && npm ci && npm run build
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: |
+            build/
+            functions/lib/
+  
+  deploy-staging:
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+      
+      - name: Deploy to Firebase Staging
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}'
+          projectId: govdataguard-staging
+          channelId: live
+      
+      - name: Deploy Functions to Staging
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only functions --project govdataguard-staging --token ${{ secrets.FIREBASE_TOKEN }}
+  
+  deploy-production:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+      
+      - name: Deploy to Firebase Production
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}'
+          projectId: govdataguard-prod
+          channelId: live
+      
+      - name: Deploy Functions to Production
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only functions,firestore:rules,storage:rules --project govdataguard-prod --token ${{ secrets.FIREBASE_TOKEN }}
+```
+
 ### 8.3 Monitoring & Observability
 
-#### Metrics
+#### Traditional Cloud Monitoring
+
+**Metrics:**
 - **Application:** Response times, error rates, throughput
 - **Infrastructure:** CPU, memory, disk, network
 - **Business:** Active users, datasets processed, scans completed
 
-#### Logging
+**Logging:**
 - **Structured Logging:** JSON format
 - **Log Levels:** ERROR, WARN, INFO, DEBUG
 - **Centralized:** ELK Stack or CloudWatch
 - **Retention:** 90 days for audit logs
 
-#### Alerting
+**Alerting:**
 - **Critical:** Immediate pager duty (PagerDuty/OpsGenie)
 - **Warning:** Slack/Email notifications
 - **Info:** Dashboard updates
 
+#### Firebase Monitoring
+
+**Firebase-Specific Tools:**
+- **Firebase Performance Monitoring:** Track frontend performance metrics
+  - Page load times
+  - Network request latencies
+  - Automatic trace collection for key user flows
+
+- **Cloud Functions Monitoring:** Backend API performance
+  - Function execution times
+  - Memory usage
+  - Error rates and stack traces
+  - Cold start metrics
+
+- **Firebase Analytics:** User behavior and engagement
+  - Active users (DAU/MAU)
+  - User retention
+  - Custom event tracking
+  - Crash reporting via Firebase Crashlytics
+
+- **Cloud Logging:** Centralized logs
+  - Function logs automatically captured
+  - Custom structured logging
+  - Log filtering and search via Google Cloud Console
+  - Export to BigQuery for analysis
+
+- **Firebase App Check:** Security monitoring
+  - Abuse prevention
+  - Bot detection
+  - Invalid traffic monitoring
+
+**Alerting (Firebase):**
+```javascript
+// Example: Cloud Function for custom alerts
+exports.sendAlerts = functions.firestore
+  .document('scans/{scanId}')
+  .onCreate(async (snap, context) => {
+    const scan = snap.data();
+    
+    if (scan.riskScore > 75) {
+      // Send alert via Cloud Pub/Sub or third-party service
+      await sendSlackAlert({
+        level: 'critical',
+        message: `High-risk scan detected: ${scan.datasetId}`,
+        riskScore: scan.riskScore
+      });
+    }
+  });
+```
+
+**Dashboards:**
+- Firebase Console for real-time metrics
+- Google Cloud Console for detailed logs and traces
+- Custom dashboards using Google Data Studio
+- Integration with third-party tools (Datadog, New Relic)
+
 ### 8.4 Disaster Recovery
+
+#### Traditional Cloud
 
 - **Backup Strategy:**
   - Database: Daily full backup + continuous WAL archiving
@@ -781,6 +1081,37 @@ jobs:
   - RPO (Recovery Point Objective): <15 minutes
   
 - **DR Testing:** Quarterly disaster recovery drills
+
+#### Firebase
+
+- **Built-in Resilience:**
+  - Firestore: Automatic multi-region replication
+  - Cloud Storage: Automatic redundancy and versioning
+  - Cloud Functions: Automatic failover across zones
+  
+- **Backup Strategy:**
+  - Firestore: Daily exports to Cloud Storage
+    ```bash
+    gcloud firestore export gs://[BUCKET_NAME]/[EXPORT_DIR]
+    ```
+  - Cloud Storage: Versioning enabled on all buckets
+  - Retention: 30 days minimum
+  
+- **Recovery Procedures:**
+  - Firestore restore from export:
+    ```bash
+    gcloud firestore import gs://[BUCKET_NAME]/[EXPORT_DIR]
+    ```
+  - Cloud Storage object recovery from version history
+  
+- **Recovery Objectives:**
+  - RTO (Recovery Time Objective): <2 hours (automated recovery)
+  - RPO (Recovery Point Objective): <5 minutes (continuous replication)
+  
+- **Disaster Scenarios:**
+  - Region failure: Automatic failover to another region
+  - Data corruption: Restore from daily exports
+  - Accidental deletion: Recover from object versions
 
 ---
 
@@ -1455,6 +1786,8 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 
 ### 18.2 Infrastructure Costs
 
+#### Option 1: Traditional Cloud (AWS/GCP/Azure)
+
 | Service | Monthly | Annual |
 |---------|---------|--------|
 | Cloud Hosting (AWS/GCP) | $2,000 | $24,000 |
@@ -1464,6 +1797,39 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 | Gemini API | $1,000 | $12,000 |
 | Monitoring (Datadog/New Relic) | $300 | $3,600 |
 | **Total Infrastructure** | **$4,300** | **$51,600** |
+
+#### Option 2: Firebase (Serverless)
+
+| Service | Monthly | Annual | Notes |
+|---------|---------|--------|-------|
+| Firebase Hosting | $0-50 | $0-600 | Free tier available, pay for usage |
+| Cloud Functions | $200-800 | $2,400-9,600 | Based on invocations & compute time |
+| Cloud Firestore | $100-500 | $1,200-6,000 | Based on reads/writes/storage |
+| Cloud Storage | $50-200 | $600-2,400 | Based on storage & bandwidth |
+| Firebase Authentication | $0-50 | $0-600 | Free tier covers most use cases |
+| Gemini API | $1,000 | $12,000 | Same across both options |
+| Firebase Performance/Analytics | $0 | $0 | Included in Firebase |
+| **Total Infrastructure (Low)** | **$1,350** | **$16,200** | Startup/MVP scale |
+| **Total Infrastructure (High)** | **$2,600** | **$31,200** | Growth scale |
+
+**Firebase Cost Advantages:**
+- 68-75% lower infrastructure costs vs traditional cloud
+- No upfront provisioning costs
+- Pay-as-you-grow pricing model
+- Free tiers cover development and early production
+- Included monitoring and analytics tools
+- No server management overhead
+
+**Firebase Cost Considerations:**
+- Costs scale with usage (reads, writes, function invocations)
+- Can become expensive at very high scale
+- Need to optimize queries and caching for cost efficiency
+- Monitor usage closely to avoid unexpected bills
+
+**Recommended Approach:**
+- **MVP/Phase 1:** Start with Firebase for rapid development and lower costs
+- **Phase 2-3:** Evaluate cost-performance trade-offs as scale grows
+- **Enterprise:** Consider hybrid approach or migration to traditional cloud if needed
 
 ### 18.3 Other Costs
 
@@ -1475,7 +1841,12 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 | Contingency (15%) | $110,000 |
 | **Total Other** | **$175,000** |
 
-**Grand Total (Year 1):** $838,600
+**Grand Total (Year 1):**
+- **Traditional Cloud:** $838,600 ($612K personnel + $51.6K infrastructure + $175K other)
+- **Firebase (Recommended):** $803,200 ($612K personnel + $16.2K infrastructure + $175K other)
+- **Cost Savings with Firebase:** $35,400 (4.2% reduction)
+
+**Note:** Firebase option offers significant infrastructure cost savings (~69%), making it ideal for MVP and early growth phases.
 
 ---
 
@@ -1495,11 +1866,42 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
    - [ ] Setup ESLint, Prettier
    - [ ] Install core dependencies (React Router, etc.)
 
-3. **Backend Setup**
+3. **Backend Setup - Choose Deployment Strategy**
+
+   **Option A: Traditional Cloud**
    - [ ] Choose backend framework (Node.js/Express or Python/FastAPI)
    - [ ] Setup database (PostgreSQL on Cloud)
    - [ ] Configure Redis for caching
    - [ ] Setup S3-compatible storage
+
+   **Option B: Firebase (Recommended for MVP)**
+   - [ ] Create Firebase project (https://console.firebase.google.com)
+   - [ ] Install Firebase CLI: `npm install -g firebase-tools`
+   - [ ] Initialize Firebase in project: `firebase init`
+     - Enable Hosting for frontend
+     - Enable Functions for backend API
+     - Enable Firestore for database
+     - Enable Storage for file uploads
+     - Enable Authentication
+   - [ ] Setup Firebase project structure:
+     ```
+     ├── firebase.json
+     ├── .firebaserc
+     ├── hosting/          # React build output
+     ├── functions/        # Backend API
+     │   ├── src/
+     │   └── package.json
+     ├── firestore.rules
+     └── storage.rules
+     ```
+   - [ ] Configure environment variables in Firebase:
+     ```bash
+     firebase functions:config:set gemini.api_key="YOUR_KEY"
+     ```
+   - [ ] Setup Firebase emulators for local development:
+     ```bash
+     firebase emulators:start
+     ```
 
 4. **Team Onboarding**
    - [ ] Kick-off meeting
@@ -1559,6 +1961,32 @@ This master blueprint provides a comprehensive roadmap for building GovData Guar
 - Performance optimization for large datasets
 - Security audit and penetration testing
 
+### Deployment Strategy Decision
+
+**Recommended: Firebase for MVP/Phase 1**
+
+Choose Firebase if:
+- ✅ Rapid MVP development is priority
+- ✅ Team has JavaScript/TypeScript expertise
+- ✅ Budget constraints require cost optimization
+- ✅ Minimal DevOps resources available
+- ✅ Need to iterate quickly based on user feedback
+- ✅ Scale requirements are moderate (<100K users, <1M datasets)
+
+Choose Traditional Cloud if:
+- ✅ Complex relational queries are critical
+- ✅ Need full control over infrastructure
+- ✅ Existing PostgreSQL expertise and tooling
+- ✅ Multi-cloud or on-premise requirements
+- ✅ Very high scale from day one (>1M users)
+- ✅ Regulatory requirements mandate specific infrastructure
+
+**Hybrid Approach:**
+- Start with Firebase for MVP (Phases 1-2)
+- Migrate to traditional cloud if needed in Phase 3
+- Use Firebase for frontend + traditional cloud for backend
+- Evaluate based on actual usage patterns and cost analysis
+
 ### Approval & Sign-off
 
 This blueprint should be reviewed and approved by:
@@ -1570,10 +1998,14 @@ This blueprint should be reviewed and approved by:
 
 ---
 
-**Document Version:** 1.0.0  
+**Document Version:** 1.1.0  
 **Next Review Date:** 2026-01-30  
 **Contact:** project-lead@govdataguard.com
 
 ---
 
 *This blueprint is a living document and will be updated as the project evolves. All changes should be version-controlled and communicated to stakeholders.*
+
+**Changelog:**
+- **v1.1.0 (2025-12-30):** Added Firebase deployment option with detailed architecture, CI/CD, monitoring, and cost comparison
+- **v1.0.0 (2025-12-30):** Initial blueprint with traditional cloud deployment

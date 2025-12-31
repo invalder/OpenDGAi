@@ -59,7 +59,7 @@ const DatasetForm: React.FC = () => {
           <select
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             value={formData.visibility}
-            onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, visibility: e.target.value as Visibility })}
           >
             <option value="public">Public</option>
             <option value="restricted">Restricted</option>

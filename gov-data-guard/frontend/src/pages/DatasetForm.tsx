@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DatasetService } from '../services/datasetService';
 import { useNavigate } from 'react-router-dom';
+import { Visibility } from '../types';
 
 const DatasetForm: React.FC = () => {
   const navigate = useNavigate();
@@ -8,8 +9,8 @@ const DatasetForm: React.FC = () => {
     title: '',
     description: '',
     owner: '',
-    visibility: 'public',
-    format: 'csv'
+    visibility: 'public' as Visibility,
+    format: 'csv' as 'csv' | 'json' | 'xml'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -17,8 +18,6 @@ const DatasetForm: React.FC = () => {
     await DatasetService.create({
       ...formData,
       pdpaStatus: 'pending',
-      visibility: formData.visibility as any,
-      format: formData.format as any
     });
     navigate('/datasets');
   };

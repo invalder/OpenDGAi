@@ -9,13 +9,11 @@ interface RiskScoreResult {
 }
 
 export const calculateRiskScore = (data: any[]): RiskScoreResult => {
-  let totalPII = 0;
   const findingsMap = new Map<string, number>();
 
   // Helper to increment finding count
   const addFinding = (type: string) => {
     findingsMap.set(type, (findingsMap.get(type) || 0) + 1);
-    totalPII++;
   };
 
   // Convert objects to strings for simple scanning or scan specific fields if structure is known.

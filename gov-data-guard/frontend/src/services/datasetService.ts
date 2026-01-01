@@ -17,6 +17,10 @@ import { httpsCallable } from 'firebase/functions';
 const DATASETS_COLLECTION = 'datasets';
 const SCANS_COLLECTION = 'scans';
 
+export const createDataset = async (dataset: Omit<Dataset, 'id' | 'createdAt' | 'updatedAt'>): Promise<Dataset> => {
+    return DatasetService.create(dataset);
+};
+
 export const DatasetService = {
   // Fetch all datasets
   getAll: async (): Promise<Dataset[]> => {

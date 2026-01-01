@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
 import DatasetList from './pages/DatasetList';
 import DatasetForm from './pages/DatasetForm';
+import CKANImport from './pages/CKANImport';
 
 const App: React.FC = () => {
   return (
@@ -23,6 +24,9 @@ const App: React.FC = () => {
               <li>
                 <Link to="/datasets/new" className="block hover:text-gray-300">New Dataset</Link>
               </li>
+              <li>
+                <Link to="/ckan-import" className="block hover:text-gray-300">CKAN Import</Link>
+              </li>
             </ul>
           </nav>
 
@@ -32,6 +36,7 @@ const App: React.FC = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/datasets" element={<DatasetList />} />
               <Route path="/datasets/new" element={<DatasetForm />} />
+              <Route path="/ckan-import" element={<CKANImport />} />
             </Routes>
           </main>
         </div>

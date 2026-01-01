@@ -30,6 +30,9 @@ export interface Dataset {
   updatedAt: string; // ISO String
   fileUrl?: string;
   format?: 'csv' | 'json' | 'xml';
+  ckanId?: string;
+  ckanUrl?: string;
+  lastSynced?: string;
 }
 
 export interface PIIFinding {

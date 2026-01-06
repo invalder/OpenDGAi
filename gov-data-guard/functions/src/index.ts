@@ -1,8 +1,11 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { scanForPII } from "./services/piiDetection";
+import { syncCKAN } from "./services/ckanSync";
 
 admin.initializeApp();
+
+export const scheduledCKANSync = syncCKAN;
 
 export const scanDataset = onCall(async (request) => {
   if (!request.auth) {

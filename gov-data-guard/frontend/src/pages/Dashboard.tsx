@@ -1,5 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 const data = [
   { name: 'Public', value: 400 },
@@ -16,9 +18,61 @@ const riskData = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const Dashboard: React.FC = () => {
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text("GovData Guard - Compliance Report", 20, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+
+    doc.setFontSize(14);
+    doc.text("Dataset Visibility", 20, 50);
+    doc.setFontSize(12);
+    data.forEach((item, index) => {
+        doc.text(`${item.name}: ${item.value}`, 20, 60 + (index * 6));
+    });
+
+    doc.setFontSize(14);
+    doc.text("Risk Distribution", 20, 90);
+    doc.setFontSize(12);
+    riskData.forEach((item, index) => {
+        doc.text(`${item.name}: ${item.value}`, 20, 100 + (index * 6));
+    });
+
+    doc.save("compliance-report.pdf");
+  };
+
+  const exportExcel = () => {
+    const wsData = [
+        ...data.map(d => ({ Category: 'Visibility', Name: d.name, Value: d.value })),
+        ...riskData.map(d => ({ Category: 'Risk', Name: d.name, Value: d.value }))
+    ];
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dashboard Data");
+    XLSX.writeFile(wb, "compliance-report.xlsx");
+  };
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="space-x-4">
+          <button
+            onClick={exportPDF}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Export PDF
+          </button>
+          <button
+            onClick={exportExcel}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Export Excel
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-4 rounded shadow">

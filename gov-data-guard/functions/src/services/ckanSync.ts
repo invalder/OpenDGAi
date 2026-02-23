@@ -12,7 +12,7 @@ interface CKANResponse {
 
 const CKAN_URL = "https://data.go.th"; // Default, could be config
 
-export const syncCKAN = onSchedule("every 24 hours", async (event) => {
+export const syncCKANHandler = async (event: any) => {
     console.log("Starting CKAN Sync...");
 
     try {
@@ -87,4 +87,6 @@ export const syncCKAN = onSchedule("every 24 hours", async (event) => {
     } catch (error) {
         console.error("Error syncing CKAN:", error);
     }
-});
+};
+
+export const syncCKAN = onSchedule("every 24 hours", syncCKANHandler);

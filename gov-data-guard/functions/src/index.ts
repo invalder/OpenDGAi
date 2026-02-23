@@ -2,10 +2,31 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { scanForPII } from "./services/piiDetection";
 import { syncCKAN } from "./services/ckanSync";
+import { generateDatasetMetadata } from "./services/aiMetadata";
 
 admin.initializeApp();
 
 export const scheduledCKANSync = syncCKAN;
+
+export const generateMetadata = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const { data } = request.data;
+
+  if (!data || !Array.isArray(data)) {
+    throw new HttpsError('invalid-argument', 'The function must be called with an array of data.');
+  }
+
+  try {
+    const metadata = await generateDatasetMetadata(data);
+    return metadata;
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    throw new HttpsError('internal', 'Unable to generate metadata.');
+  }
+});
 
 export const scanDataset = onCall(async (request) => {
   if (!request.auth) {
